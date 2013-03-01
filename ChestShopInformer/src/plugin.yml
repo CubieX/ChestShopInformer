@@ -1,0 +1,22 @@
+name: ChestShopInformer
+main: com.github.CubieX.ChestShopInformer.ChestShopInformer
+softdepend: [PermissionsEx, zPermissions, bPermissions, PermissionsBukkit]
+version: 1.0.0
+authors: [CubieX]
+description: Informs about a players ChestShop shops in a specified area
+
+commands:
+    csi:
+      description: Using ChestShopInformer
+      usage: /csi version | reload
+
+permissions:    
+    chestshopinformer.create:
+        description: Allows creation and destruction of a informer sign
+        default: op
+    chestshopinformer.use:
+        description: Allows usage of a sign to list own shops info
+        default: op
+    chestshopinformer.admin:
+        description: Allows reloading the plugin and all other actions
+        default: op

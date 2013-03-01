@@ -1,0 +1,18 @@
+# do NOT change the config version.
+config_version: 1
+# set locale for user dialog messages
+language: de
+# enable debug output
+debug: false
+# maximum allowed distance between both x corner values
+# This is limited to 316 blocks max for performance reasons
+# A value of 10 means the scan will cover
+# 5 blocks in positive and
+# 5 blocks in negative X direction with the sign in the center
+maxScanDistanceX: 32
+# maximum allowed distance between both z corner values
+# This is limited to 316 blocks max for performance reasons
+# A value of 10 means the scan will cover
+# 5 blocks in positive and
+# 5 blocks in negative Z direction with the sign in the center
+maxScanDistanceZ: 32

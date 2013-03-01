@@ -1,0 +1,5 @@
+Changelog for ChestShopInformer by CubieX
+------------------------------------------
+
+V. 1.0.0
+- first initial version
