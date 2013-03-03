@@ -1,9 +1,9 @@
 package com.github.CubieX.ChestShopInformer;
 
+import java.util.Calendar;
 import java.util.logging.Logger;
 
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.block.DoubleChest;
@@ -189,5 +189,10 @@ public class ChestShopInformer extends JavaPlugin
 
       player.sendMessage(statistic);
    } // end method
+   
+   public long getCurrTimeInMillis()
+   {
+      return (((Calendar)Calendar.getInstance()).getTimeInMillis());
+   }
 
 }

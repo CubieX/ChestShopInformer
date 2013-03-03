@@ -1,5 +1,6 @@
 package com.github.CubieX.ChestShopInformer;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
@@ -7,13 +8,14 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 
 public class CSIentityListener implements Listener
 {
    private final ChestShopInformer plugin;
+   private long lastScanTimestamp = 0;
+   private final static int LAST_SCAN_TIMESTAMP = 5000; // this defines the maximum scan interval in milliseconds (only use full thousands!)
 
    //Constructor
    public CSIentityListener(ChestShopInformer plugin)
@@ -58,7 +60,7 @@ public class CSIentityListener implements Listener
       {
          ChestShopInformer.log.info("im onSignChangeEvent");
          event.getPlayer().sendMessage("Linie 0:" + event.getLine(0)); //debug
-      }   
+      }
 
       if(event.getLine(0).equalsIgnoreCase("<CS-Informer>")) // CSI sign?
       {   
@@ -83,6 +85,8 @@ public class CSIentityListener implements Listener
             {
                if(ChestShopInformer.debug){ChestShopInformer.log.info("Ist das Sign korrekt geschrieben?");}
 
+               // TODO per WorldEdit-Auswahl auswählbar machen. (muss dann Start- und Endblock abfragen und prüfen dass die Auswahl nur 1 BLock hoch ist u.s.w.
+               // und aufs schild muss dann z.B. in die 2. Zeile "we" damit er weiß, er soll die Auswahl nehmen. (wird dann ersetzt auf Schild mit den coords)
                lineArray = (event.getLine(1).split(":"));   //parse firstXcoord:firstYcoord:firstZcoord
                if(ChestShopInformer.debug){ChestShopInformer.log.info("ArrayLength: " + String.valueOf(lineArray.length));}
 
@@ -182,7 +186,7 @@ public class CSIentityListener implements Listener
 
             if(parsingXok && parsingYok && parsingZok)
             {               
-               event.setLine(3, "Shops abfragen");
+               event.setLine(3, "Shops abfragen");               
                player.sendMessage(ChatColor.GREEN + "ChestShopInformer-Schild erstellt!");
             }
             else
@@ -190,7 +194,7 @@ public class CSIentityListener implements Listener
                //not a correctly formatted sign. Abort.                
                event.getBlock().breakNaturally();
                player.sendMessage(ChatColor.YELLOW + "Hilfe: 1.Zeile: <CS-Informer> 2.Zeile: x1:y:z1 3.Zeile: x2:y:z2\n" +
-               "Y-Wert muss die Hoehe sein auf der die Shop-Schilder haengen!");
+                     "Y-Wert muss die Hoehe sein auf der die Shop-Schilder haengen!");
             }
          }
          else
@@ -216,70 +220,98 @@ public class CSIentityListener implements Listener
       // secondYcoord must be the same value than firstYcoord, so its not needed here
       int secondZcoord = 0;
 
-      if(event.getAction() == Action.LEFT_CLICK_BLOCK)
+      if(event.getAction() == Action.RIGHT_CLICK_BLOCK)
       {
          if(event.getClickedBlock().getTypeId() == 63 ||
                event.getClickedBlock().getTypeId() == 68) // Left clicked a sign on a block (68) oder a signpost (63)?
          {
             sign = (Sign) event.getClickedBlock().getState();
+            final Sign signToUpdate = (Sign) event.getClickedBlock().getState();
 
             if(sign.getLine(0).equalsIgnoreCase("<CS-Informer>")) // is CSI sign?
             {
                if(event.getPlayer().hasPermission("chestshopinformer.use"))
-               {                                                      
-                  try
+               {
+                  // this blocks exploiting the sign by a player by setting a minimum wait time until scan is ready again
+                  if((plugin.getCurrTimeInMillis() - lastScanTimestamp) > CSIentityListener.LAST_SCAN_TIMESTAMP)
                   {
-                     lineArray = (sign.getLine(1).split(":"));   //parse firstXcoord:firstYcoord:firstZcoord
+                     lastScanTimestamp = plugin.getCurrTimeInMillis();                     
+                     sign.setLine(3, "bitte warten..");
+                     sign.update();                     
 
-                     firstXcoord = Integer.parseInt(lineArray[0]);
-                     firstYcoord = Integer.parseInt(lineArray[1]);
-                     firstZcoord = Integer.parseInt(lineArray[2]);
-                     
-                     if(ChestShopInformer.debug){ChestShopInformer.log.info("firstXcoord: " + String.valueOf(firstXcoord) + ", firstYcoord: " + String.valueOf(firstYcoord) + ", firstZcoord: " + String.valueOf(firstZcoord));}
-
-                     lineArray = (sign.getLine(2).split(":"));   //parse secondXcoord:secondYcoord:secondZcoord
-
-                     secondXcoord = Integer.parseInt(lineArray[0]);                     
-                     secondZcoord = Integer.parseInt(lineArray[2]);
-                     
-                     if(ChestShopInformer.debug){ChestShopInformer.log.info("secondXcoord: " + String.valueOf(secondXcoord) + ", secondZcoord: " + String.valueOf(secondZcoord));}
-
-                     // TODO scan shops here within given area and send message to askingPlayer!
-                     // Scan all signs for ChestShop-Signs of the player, then scan chests directly below them
-                     // TODO DO THIS ASYNCHRONOUSLY IF POSSIBLE....
-
-                     if(firstXcoord <= secondXcoord)
+                     try
                      {
-                        if(firstZcoord <= secondZcoord)
+                        lineArray = (sign.getLine(1).split(":"));   //parse firstXcoord:firstYcoord:firstZcoord
+
+                        firstXcoord = Integer.parseInt(lineArray[0]);
+                        firstYcoord = Integer.parseInt(lineArray[1]);
+                        firstZcoord = Integer.parseInt(lineArray[2]);
+
+                        if(ChestShopInformer.debug){ChestShopInformer.log.info("firstXcoord: " + String.valueOf(firstXcoord) + ", firstYcoord: " + String.valueOf(firstYcoord) + ", firstZcoord: " + String.valueOf(firstZcoord));}
+
+                        lineArray = (sign.getLine(2).split(":"));   //parse secondXcoord:secondYcoord:secondZcoord
+
+                        secondXcoord = Integer.parseInt(lineArray[0]);                     
+                        secondZcoord = Integer.parseInt(lineArray[2]);
+
+                        if(ChestShopInformer.debug){ChestShopInformer.log.info("secondXcoord: " + String.valueOf(secondXcoord) + ", secondZcoord: " + String.valueOf(secondZcoord));}
+
+                        // TODO scan shops here within given area and send message to askingPlayer!
+                        // Scan all signs for ChestShop-Signs of the player, then scan chests directly below them
+                        // TODO DO THIS ASYNCHRONOUSLY IF POSSIBLE....
+
+                        if(firstXcoord <= secondXcoord)
                         {
-                           plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), firstXcoord, secondXcoord, firstYcoord, firstZcoord, secondZcoord);
+                           if(firstZcoord <= secondZcoord)
+                           {
+                              plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), firstXcoord, secondXcoord, firstYcoord, firstZcoord, secondZcoord);
+                           }
+                           else
+                           {
+                              plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), firstXcoord, secondXcoord, firstYcoord, secondZcoord, firstZcoord);
+                           }                        
                         }
                         else
                         {
-                           plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), firstXcoord, secondXcoord, firstYcoord, secondZcoord, firstZcoord);
-                        }                        
-                     }
-                     else
-                     {
-                        if(firstZcoord <= secondZcoord)
-                        {
-                           plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), secondXcoord, firstXcoord, firstYcoord, firstZcoord, secondZcoord);
+                           if(firstZcoord <= secondZcoord)
+                           {
+                              plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), secondXcoord, firstXcoord, firstYcoord, firstZcoord, secondZcoord);
+                           }
+                           else
+                           {
+                              plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), secondXcoord, firstXcoord, firstYcoord, secondZcoord, firstZcoord);
+                           }
                         }
-                        else
-                        {
-                           plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), secondXcoord, firstXcoord, firstYcoord, secondZcoord, firstZcoord);
-                        }
-                     }
 
-                     // askingPlayer.sendMessage(ChatColor.GREEN + "Shop-Statstik fuer dich:\n" +
-                     // "1. Eisenbloecke: 134 uebrig\n" +
-                     // "2. Eisenbloecke: 54 uebrig");
+                        // askingPlayer.sendMessage(ChatColor.GREEN + "Shop-Statstik fuer dich:\n" +
+                        // "1. Eisenbloecke: 134 uebrig\n" +
+                        // "2. Eisenbloecke: 54 uebrig");
+
+                        // reset sign text after waiting time has passed =====================
+                        Bukkit.getServer().getScheduler().runTaskLater(plugin, new Runnable()
+                        {
+                           public void run()
+                           {
+                              if(null != signToUpdate)
+                              {
+                                 signToUpdate.setLine(3, "Shops abfragen");
+                                 signToUpdate.update();
+                              }
+                           }
+
+                        }, 20*(CSIentityListener.LAST_SCAN_TIMESTAMP / 1000));
+                        // ===================================================================
+                     }
+                     catch(Exception e)
+                     {
+                        if(ChestShopInformer.debug){ChestShopInformer.log.info("This is no valid ChestShopInformer sign! " + e.getMessage());}
+                        event.getPlayer().sendMessage(ChatColor.RED + "Dies ist kein gueltiges ChestShopInformer-Schild!");
+                     }
                   }
-                  catch(Exception e)
-                  {
-                     if(ChestShopInformer.debug){ChestShopInformer.log.info("This is no valid ChestShopInformer sign! " + e.getMessage());}
-                     event.getPlayer().sendMessage(ChatColor.RED + "Dies ist kein gueltiges ChestShopInformer-Schild!");
-                  }                    
+                  else
+                  {                     
+                     event.getPlayer().sendMessage(ChatColor.YELLOW + "Abfrage ist nur alle 5 Sekunden möglich!");                                          
+                  }
                }
                else
                {
