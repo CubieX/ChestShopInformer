@@ -2,7 +2,6 @@ package com.github.CubieX.ChestShopInformer;
 
 import java.util.Calendar;
 import java.util.logging.Logger;
-
 import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
@@ -11,19 +10,21 @@ import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 
 public class ChestShopInformer extends JavaPlugin
 {
    private CSIconfigHandler cHandler = null;
    private CSIentityListener eListener = null;   
    private CSIcommandHandler comHandler = null;
-
+   private WorldEditPlugin weInst = null;
+   
    public static final Logger log = Logger.getLogger("Minecraft");
    static final String logPrefix = "[ChestShopInformer] "; // Prefix to go in front of all log entries
    static boolean debug = false;
    public static final int MAX_SCAN_DISTANCE_X = 316;
    public static final int MAX_SCAN_DISTANCE_Z = 316;
-
+   
    //************************************************
    static String usedConfigVersion = "1"; // Update this every time the config file version changes, so the plugin knows, if there is a suiting config present
    //************************************************
@@ -50,10 +51,15 @@ public class ChestShopInformer extends JavaPlugin
          getServer().getPluginManager().disablePlugin(this);
          return;
       }
+      
+      if(null != getServer().getPluginManager().getPlugin("WorldEdit"))
+      {
+         weInst = (WorldEditPlugin)getServer().getPluginManager().getPlugin("WorldEdit");         
+      }
 
       comHandler = new CSIcommandHandler(this, cHandler);
       getCommand("csi").setExecutor(comHandler);      
-      eListener = new CSIentityListener(this);  
+      eListener = new CSIentityListener(this, weInst);  
 
       readConfigValues();
 

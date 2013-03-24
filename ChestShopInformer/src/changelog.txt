@@ -1,5 +1,7 @@
 Changelog for ChestShopInformer by CubieX
 ------------------------------------------
+V1.1.0
+- added (optional) WorldEdit support for selecting the scanned area
 
 V. 1.0.0
 - first initial version

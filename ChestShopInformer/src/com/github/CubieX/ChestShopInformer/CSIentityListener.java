@@ -11,16 +11,21 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 
+import com.sk89q.worldedit.bukkit.WorldEditPlugin;
+import com.sk89q.worldedit.bukkit.selections.Selection;
+
 public class CSIentityListener implements Listener
 {
    private final ChestShopInformer plugin;
+   private WorldEditPlugin weInst;
    private long lastScanTimestamp = 0;
    private final static int LAST_SCAN_TIMESTAMP = 5000; // this defines the maximum scan interval in milliseconds (only use full thousands!)
 
    //Constructor
-   public CSIentityListener(ChestShopInformer plugin)
+   public CSIentityListener(ChestShopInformer plugin, WorldEditPlugin weInst)
    {
       this.plugin = plugin;
+      this.weInst = weInst;
 
       plugin.getServer().getPluginManager().registerEvents(this, plugin);
    }
@@ -81,42 +86,77 @@ public class CSIentityListener implements Listener
             boolean parsingYok = false;
             boolean parsingZok = false;
 
+            Selection weSel = null;
+
             try //correct format and valid item/block?
             {
                if(ChestShopInformer.debug){ChestShopInformer.log.info("Ist das Sign korrekt geschrieben?");}
 
-               // TODO per WorldEdit-Auswahl auswählbar machen. (muss dann Start- und Endblock abfragen und prüfen dass die Auswahl nur 1 BLock hoch ist u.s.w.
-               // und aufs schild muss dann z.B. in die 2. Zeile "we" damit er weiß, er soll die Auswahl nehmen. (wird dann ersetzt auf Schild mit den coords)
-               lineArray = (event.getLine(1).split(":"));   //parse firstXcoord:firstYcoord:firstZcoord
-               if(ChestShopInformer.debug){ChestShopInformer.log.info("ArrayLength: " + String.valueOf(lineArray.length));}
+               // TODO per WorldEdit-Auswahl auswaehlbar machen. (muss dann Start- und Endblock abfragen und pruefen dass die Auswahl nur 1 BLock hoch ist u.s.w.
+               // und aufs Schild muss dann z.B. in die 2. Zeile "we" damit er weiss, er soll die Auswahl nehmen. (wird dann ersetzt auf Schild mit den coords)
 
-               if(lineArray.length == 3)
+               if(null != weInst)
                {
-                  firstXcoord = Integer.parseInt(lineArray[0]);
-                  firstYcoord = Integer.parseInt(lineArray[1]);
-                  firstZcoord = Integer.parseInt(lineArray[2]);
+                  if(null != weInst.getSelection(player))
+                  {
+                     weSel = weInst.getSelection(player);
+                  }
+               }
 
-                  if(ChestShopInformer.debug){ChestShopInformer.log.info("firstXcoord: " + String.valueOf(firstXcoord) + ", firstYcoord: " + String.valueOf(firstYcoord) + ", firstZcoord: " + String.valueOf(firstZcoord));}                 
+               if(null != weSel)
+               {
+                  // Get coords from active WE selection, if player wrote "we" in line 1 and write them on the sign in line 1 and 2.
+                  if(event.getLine(1).equalsIgnoreCase("we"))
+                  {
+                     firstXcoord = (int)weSel.getMinimumPoint().getX();
+                     firstYcoord = (int)weSel.getMinimumPoint().getY();
+                     firstZcoord = (int)weSel.getMinimumPoint().getZ();
+
+                     secondXcoord = (int)weSel.getMaximumPoint().getX();
+                     secondYcoord = (int)weSel.getMaximumPoint().getY();
+                     secondZcoord = (int)weSel.getMaximumPoint().getZ();
+
+                     event.setLine(1, String.valueOf(firstXcoord) + ":" + String.valueOf(firstYcoord) + ":" + String.valueOf(firstZcoord));
+                     event.setLine(2, String.valueOf(secondXcoord) + ":" + String.valueOf(secondYcoord) + ":" + String.valueOf(secondZcoord));
+                  }
+                  // END Get coords from active WE selection and if correct, write them on the sign in line 1 and 2.
                }
                else
                {
-                  throw new Exception(ChatColor.YELLOW + "Ungueltige Eingaben!");
-               }
+                  // Get coords directly from sign text (no active WE selection) ==================
+                  lineArray = (event.getLine(1).split(":"));   //parse firstXcoord:firstYcoord:firstZcoord
+                  if(ChestShopInformer.debug){ChestShopInformer.log.info("ArrayLength: " + String.valueOf(lineArray.length));}
 
-               lineArray = (event.getLine(2).split(":"));   //parse secondXcoord:secondYcoord:secondZcoord
-               if(ChestShopInformer.debug){ChestShopInformer.log.info("ArrayLength: " + String.valueOf(lineArray.length));}
+                  if(lineArray.length == 3)
+                  {
+                     firstXcoord = Integer.parseInt(lineArray[0]);
+                     firstYcoord = Integer.parseInt(lineArray[1]);
+                     firstZcoord = Integer.parseInt(lineArray[2]);
 
-               if(lineArray.length == 3)
-               {
-                  secondXcoord = Integer.parseInt(lineArray[0]);
-                  secondYcoord = Integer.parseInt(lineArray[1]);
-                  secondZcoord = Integer.parseInt(lineArray[2]);
+                     if(ChestShopInformer.debug){ChestShopInformer.log.info("firstXcoord: " + String.valueOf(firstXcoord) + ", firstYcoord: " + String.valueOf(firstYcoord) + ", firstZcoord: " + String.valueOf(firstZcoord));}                 
+                  }
+                  else
+                  {
+                     throw new Exception(ChatColor.YELLOW + "Ungueltige Eingaben!");
+                  }
 
-                  if(ChestShopInformer.debug){ChestShopInformer.log.info("secondXcoord: " + String.valueOf(secondXcoord) + ", secondYcoord: " + String.valueOf(secondYcoord) + ", secondZcoord: " + String.valueOf(secondZcoord));}                 
-               }
-               else
-               {
-                  throw new Exception(ChatColor.YELLOW + "Ungueltige Eingaben!");
+                  lineArray = (event.getLine(2).split(":"));   //parse secondXcoord:secondYcoord:secondZcoord
+                  if(ChestShopInformer.debug){ChestShopInformer.log.info("ArrayLength: " + String.valueOf(lineArray.length));}
+
+                  if(lineArray.length == 3)
+                  {
+                     secondXcoord = Integer.parseInt(lineArray[0]);
+                     secondYcoord = Integer.parseInt(lineArray[1]);
+                     secondZcoord = Integer.parseInt(lineArray[2]);
+
+                     if(ChestShopInformer.debug){ChestShopInformer.log.info("secondXcoord: " + String.valueOf(secondXcoord) + ", secondYcoord: " + String.valueOf(secondYcoord) + ", secondZcoord: " + String.valueOf(secondZcoord));}                 
+                  }
+                  else
+                  {
+                     throw new Exception(ChatColor.YELLOW + "Ungueltige Eingaben!");
+                  }
+
+                  // END Get coords from sign text (no active WE selection) ==================
                }
 
                // check which X coord value is bigger and calculate difference accordingly
@@ -185,8 +225,9 @@ public class CSIentityListener implements Listener
             }
 
             if(parsingXok && parsingYok && parsingZok)
-            {               
-               event.setLine(3, "Shops abfragen");               
+            {
+               event.setLine(0,  "<CS-Informer>");
+               event.setLine(3, "Shops abfragen");
                player.sendMessage(ChatColor.GREEN + "ChestShopInformer-Schild erstellt!");
             }
             else
@@ -310,7 +351,7 @@ public class CSIentityListener implements Listener
                   }
                   else
                   {                     
-                     event.getPlayer().sendMessage(ChatColor.YELLOW + "Abfrage ist nur alle 5 Sekunden möglich!");                                          
+                     event.getPlayer().sendMessage(ChatColor.YELLOW + "Abfrage ist nur alle 5 Sekunden moeglich!");                                          
                   }
                }
                else
