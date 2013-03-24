@@ -68,7 +68,7 @@ public class CSIentityListener implements Listener
       }
 
       if(event.getLine(0).equalsIgnoreCase("<CS-Informer>")) // CSI sign?
-      {   
+      {
          if(ChestShopInformer.debug){ChestShopInformer.log.info("CSI-Sign erkannt");}
 
          if(event.getPlayer().hasPermission("chestshopinformer.create") || event.getPlayer().hasPermission("chestshopinformer.admin"))
@@ -103,27 +103,26 @@ public class CSIentityListener implements Listener
                   }
                }
 
-               if(null != weSel)
+               if((null != weSel) &&
+                     (event.getLine(1).equalsIgnoreCase("we")))
                {
                   // Get coords from active WE selection, if player wrote "we" in line 1 and write them on the sign in line 1 and 2.
-                  if(event.getLine(1).equalsIgnoreCase("we"))
-                  {
-                     firstXcoord = (int)weSel.getMinimumPoint().getX();
-                     firstYcoord = (int)weSel.getMinimumPoint().getY();
-                     firstZcoord = (int)weSel.getMinimumPoint().getZ();
+                  firstXcoord = (int)weSel.getMinimumPoint().getX();
+                  firstYcoord = (int)weSel.getMinimumPoint().getY();
+                  firstZcoord = (int)weSel.getMinimumPoint().getZ();
 
-                     secondXcoord = (int)weSel.getMaximumPoint().getX();
-                     secondYcoord = (int)weSel.getMaximumPoint().getY();
-                     secondZcoord = (int)weSel.getMaximumPoint().getZ();
+                  secondXcoord = (int)weSel.getMaximumPoint().getX();
+                  secondYcoord = (int)weSel.getMaximumPoint().getY();
+                  secondZcoord = (int)weSel.getMaximumPoint().getZ();
 
-                     event.setLine(1, String.valueOf(firstXcoord) + ":" + String.valueOf(firstYcoord) + ":" + String.valueOf(firstZcoord));
-                     event.setLine(2, String.valueOf(secondXcoord) + ":" + String.valueOf(secondYcoord) + ":" + String.valueOf(secondZcoord));
-                  }
-                  // END Get coords from active WE selection and if correct, write them on the sign in line 1 and 2.
+                  event.setLine(1, String.valueOf(firstXcoord) + ":" + String.valueOf(firstYcoord) + ":" + String.valueOf(firstZcoord));
+                  event.setLine(2, String.valueOf(secondXcoord) + ":" + String.valueOf(secondYcoord) + ":" + String.valueOf(secondZcoord));
+
+                  // END Get coords from active WE selection.
                }
                else
                {
-                  // Get coords directly from sign text (no active WE selection) ==================
+                  // Get coords directly from sign text (no active WE selection or player does not want to use it) ==================
                   lineArray = (event.getLine(1).split(":"));   //parse firstXcoord:firstYcoord:firstZcoord
                   if(ChestShopInformer.debug){ChestShopInformer.log.info("ArrayLength: " + String.valueOf(lineArray.length));}
 
@@ -156,28 +155,32 @@ public class CSIentityListener implements Listener
                      throw new Exception(ChatColor.YELLOW + "Ungueltige Eingaben!");
                   }
 
-                  // END Get coords from sign text (no active WE selection) ==================
+                  // END Get coords from sign text ===========================================
                }
 
                // check which X coord value is bigger and calculate difference accordingly
                if(firstXcoord >= secondXcoord)
                {
-                  if((firstXcoord - secondXcoord) <= ChestShopInformer.MAX_SCAN_DISTANCE_X)
+                  if((firstXcoord - secondXcoord) <= ChestShopInformer.maxScanDistanceX)
                   {
                      parsingXok = true;
                   }
-               }
-               else if (secondXcoord > firstXcoord)
-               {
-                  if((secondXcoord - firstXcoord) <= ChestShopInformer.MAX_SCAN_DISTANCE_X)
+                  else
                   {
-                     parsingXok = true;
+                     throw new Exception(ChatColor.YELLOW + "X-Distanz zu Gross! Maximal erlaubt: " + ChestShopInformer.maxScanDistanceX);
                   }
                }
                else
                {
-                  throw new Exception(ChatColor.YELLOW + "X-Distanz zu Gross! Maximal erlaubt: 316");
-               }
+                  if((secondXcoord - firstXcoord) <= ChestShopInformer.maxScanDistanceX)
+                  {
+                     parsingXok = true;
+                  }
+                  else
+                  {
+                     throw new Exception(ChatColor.YELLOW + "X-Distanz zu Gross! Maximal erlaubt: " + ChestShopInformer.maxScanDistanceX);
+                  }
+               }               
 
                // check if Y coord values are identical (only one height level will be scanned for signs!)
                if((firstYcoord == secondYcoord) &&
@@ -193,22 +196,26 @@ public class CSIentityListener implements Listener
                // check which Z coord value is bigger and calculate difference accordingly
                if(firstZcoord >= secondZcoord)
                {
-                  if((firstZcoord - secondZcoord) <= ChestShopInformer.MAX_SCAN_DISTANCE_Z)
+                  if((firstZcoord - secondZcoord) <= ChestShopInformer.maxScanDistanceZ)
                   {
                      parsingZok = true;
                   }
-               }
-               else if (secondZcoord > firstZcoord)
-               {
-                  if((secondZcoord - firstZcoord) <= ChestShopInformer.MAX_SCAN_DISTANCE_Z)
+                  else
                   {
-                     parsingZok = true;
+                     throw new Exception(ChatColor.YELLOW + "Z-Distanz zu Gross! Maximal erlaubt: " + ChestShopInformer.maxScanDistanceZ);
                   }
                }
                else
                {
-                  throw new Exception(ChatColor.YELLOW + "Z-Distanz zu Gross! Maximal erlaubt: 316");
-               }
+                  if((secondZcoord - firstZcoord) <= ChestShopInformer.maxScanDistanceZ)
+                  {
+                     parsingZok = true;
+                  }
+                  else
+                  {
+                     throw new Exception(ChatColor.YELLOW + "Z-Distanz zu Gross! Maximal erlaubt: " + ChestShopInformer.maxScanDistanceZ);
+                  }
+               }               
             }
             catch (Exception e)
             {

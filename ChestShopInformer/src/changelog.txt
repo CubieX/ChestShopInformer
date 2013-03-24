@@ -1,5 +1,11 @@
 Changelog for ChestShopInformer by CubieX
 ------------------------------------------
+V1.1.1
+- max scan distance is now checked against config values and not the hardcoded MAX limits.
+  However, hardcoded MAX limits can not be exceeded.
+- fixed distinction between WorldEdit and manual distance setting
+- fixed error message handling
+
 V1.1.0
 - added (optional) WorldEdit support for selecting the scanned area
 

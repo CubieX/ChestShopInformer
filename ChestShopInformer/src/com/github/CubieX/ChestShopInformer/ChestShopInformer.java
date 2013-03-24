@@ -22,14 +22,14 @@ public class ChestShopInformer extends JavaPlugin
    public static final Logger log = Logger.getLogger("Minecraft");
    static final String logPrefix = "[ChestShopInformer] "; // Prefix to go in front of all log entries
    static boolean debug = false;
-   public static final int MAX_SCAN_DISTANCE_X = 316;
+   public static final int MAX_SCAN_DISTANCE_X = 316; // Hard limit for performance reasons. Config values must be within these values.
    public static final int MAX_SCAN_DISTANCE_Z = 316;
    
    //************************************************
    static String usedConfigVersion = "1"; // Update this every time the config file version changes, so the plugin knows, if there is a suiting config present
    //************************************************
 
-   static int maxScanDistanceX = 32;
+   static int maxScanDistanceX = 32; // these values are checked on sign creation and can be set in the config file. 
    static int maxScanDistanceZ = 32;
 
    @Override
