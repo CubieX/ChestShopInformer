@@ -1,5 +1,8 @@
 Changelog for ChestShopInformer by CubieX
 ------------------------------------------
+V1.2.0
+- added check for validity of ChestShop signs. Invalid signs will be reported to the querying player.
+
 V1.1.1
 - max scan distance is now checked against config values and not the hardcoded MAX limits.
   However, hardcoded MAX limits can not be exceeded.

@@ -18,13 +18,13 @@ public class ChestShopInformer extends JavaPlugin
    private CSIentityListener eListener = null;   
    private CSIcommandHandler comHandler = null;
    private WorldEditPlugin weInst = null;
-   
+
    public static final Logger log = Logger.getLogger("Minecraft");
    static final String logPrefix = "[ChestShopInformer] "; // Prefix to go in front of all log entries
    static boolean debug = false;
    public static final int MAX_SCAN_DISTANCE_X = 316; // Hard limit for performance reasons. Config values must be within these values.
    public static final int MAX_SCAN_DISTANCE_Z = 316;
-   
+
    //************************************************
    static String usedConfigVersion = "1"; // Update this every time the config file version changes, so the plugin knows, if there is a suiting config present
    //************************************************
@@ -51,7 +51,7 @@ public class ChestShopInformer extends JavaPlugin
          getServer().getPluginManager().disablePlugin(this);
          return;
       }
-      
+
       if(null != getServer().getPluginManager().getPlugin("WorldEdit"))
       {
          weInst = (WorldEditPlugin)getServer().getPluginManager().getPlugin("WorldEdit");         
@@ -138,10 +138,15 @@ public class ChestShopInformer extends JavaPlugin
    void scanForShops (Player player, String world, int startXcoord, int endXcoord, int yCoord, int startZcoord, int endZCoord)
    {
       Sign sign = null;
-      String statistic = ChatColor.GREEN + "------------------------------------------------\n" +
+      String statisticEmptyShops = ChatColor.YELLOW + "------------------------------------------------\n" +
             "Folgende Shops von dir auf dieser Ebene sind leer:\n" + 
             "------------------------------------------------" + ChatColor.WHITE + "\n";
+      String statisticInvalidSigns = ChatColor.RED + "------------------------------------------------\n" +
+            "Folgende Shops von dir auf dieser Ebene sind \n" + 
+            "falsch angelegt (Schild) und damit ungeschuetzt:\n" + 
+            "------------------------------------------------" + ChatColor.WHITE + "\n";
       int emptyChests = 0;
+      int invalidShopSigns = 0;
 
       // iterate through all blocks in Y-height layer and search for ChestShop-Signs of the player
       for(int xC = startXcoord; xC <= endXcoord; xC++)
@@ -154,33 +159,43 @@ public class ChestShopInformer extends JavaPlugin
                sign = (Sign) this.getServer().getWorld(world).getBlockAt(xC, yCoord, zC).getState();
 
                // check if sign is a ChestShop sign by reading the first line and match it with players name
-               if(sign.getLine(0).equalsIgnoreCase(player.getName())) // second line could be checked to be sure, but here omitted...
+               if(sign.getLine(0).equalsIgnoreCase(player.getName()))
                {
-                  // this sign is a shop of the asking player, so scan for chest below it                  
+                  // this sign seems to be a shop of the asking player, so scan for chest below it
                   Block chestBlock = this.getServer().getWorld(world).getBlockAt(sign.getX(), sign.getY()-1, sign.getZ());
 
                   if(chestBlock.getState() instanceof Chest || chestBlock.getState() instanceof DoubleChest)
                   {
-                     Chest chest = ((Chest) chestBlock.getState());
-                     boolean empty = true;
-
-                     // look through chest inventory to see if its empty or not
-                     for (ItemStack stack : chest.getBlockInventory().getContents())
+                     // a chest was found below the sign. Now check if the sign is correctly formatted and thus a valid ChestShop sign                     
+                     if(shopSignIsValid(sign))
                      {
-                        if (null != stack)
+                        Chest chest = ((Chest) chestBlock.getState());
+                        boolean empty = true;
+
+                        // look through chest inventory to see if its empty or not
+                        for (ItemStack stack : chest.getBlockInventory().getContents())
                         {
-                           empty = false;
-                           // TODO count items here to show it to the player (in later version...)
-                           
-                           break; // delete this, if item count should be made!
+                           if (null != stack)
+                           {
+                              empty = false;
+                              // TODO count items here to show it to the player (in later version...)
+
+                              break; // delete this, if item count should be made!
+                           }
+                        }
+
+                        if(empty)
+                        {
+                           emptyChests++;
+                           // chest is empty, so add it to report
+                           statisticEmptyShops = statisticEmptyShops + emptyChests + ". " + chestBlock.getX() + ":" + chestBlock.getY() + ":" + chestBlock.getZ() + " " + sign.getLine(3) + "\n";
                         }
                      }
-
-                     if(empty)
+                     else
                      {
-                        emptyChests++;
-                        // chest is empty, so add it to report
-                        statistic = statistic + emptyChests + ". " + chestBlock.getX() + ":" + chestBlock.getY() + ":" + chestBlock.getZ() + " " + sign.getLine(3) + "\n";
+                        invalidShopSigns++;
+                        // this shop sign is not correctly formatted, thus the shop is not working and unprotected
+                        statisticInvalidSigns = statisticInvalidSigns + invalidShopSigns + ". " + chestBlock.getX() + ":" + chestBlock.getY() + ":" + chestBlock.getZ() + " " + sign.getLine(3) + "\n";
                      }
                   }
                }
@@ -188,14 +203,103 @@ public class ChestShopInformer extends JavaPlugin
          } // end for xZ
       } // end for xC
 
-      if(emptyChests == 0)
+      if(0 == emptyChests)
       {
-         statistic = ChatColor.YELLOW + "Es wurden keine Shops von dir im Suchbereich gefunden!";
+         statisticEmptyShops = ChatColor.YELLOW + "Es wurden keine Shops von dir im Suchbereich gefunden!";
       }
 
-      player.sendMessage(statistic);
+      player.sendMessage(statisticEmptyShops);
+
+      if(0 < invalidShopSigns)
+      {
+         player.sendMessage(statisticInvalidSigns);
+      }
    } // end method
-   
+
+   boolean shopSignIsValid (Sign sign)
+   {
+      boolean valid = false;
+      String line = "";
+      String[] lineArrayA;
+
+      if(null != sign)
+      {
+         try
+         {
+            // parse second line to check if the value is a positive value            
+            if(isPosNumber(sign.getLine(1)))
+            {
+               // parse third line to check if it has valid format "B PRICE" or ":S PRICE" or "B PRICE:PRICE S"
+               line = sign.getLine(2);
+               line = line.replace(":", " "); // this makes further parsing easier. Correct line may now be "B XX" or " YY S" or "B PRICE PRICE S"
+
+               lineArrayA = line.split(" "); // splits at first space found. If text is " YY S", the leading space will cause a empty string to be written to lineArray[0].
+
+               if(2 == lineArrayA.length) // may be [0]=B and [1]=XX
+               {
+                  if((lineArrayA[0].equals("B")) && (isPosNumber(lineArrayA[1]))) // on Sign: "B XX"
+                  {
+                     if(0 < sign.getLine(3).length()) // ItemID is present
+                     {
+                        valid = true; // seems to be a valid ChestShop sign
+                     }
+                  }
+               }
+
+               if(3 == lineArrayA.length) // may be [0]=" " and [1]=YY and [2]=S
+               {
+                  if((lineArrayA[0].equals("")) && (isPosNumber(lineArrayA[1])) && (lineArrayA[2].equals("S"))) // on Sign: ":YY S"
+                  {
+                     if(0 < sign.getLine(3).length()) // ItemID is present
+                     {
+                        valid = true; // seems to be a valid ChestShop sign
+                     }
+                  }
+               }
+
+               if (4 == lineArrayA.length) // may be format "B XX:YY S" (in line string it's then "B XX YY S")
+               {
+                  if((lineArrayA[0].equals("B")) &&
+                        (isPosNumber(lineArrayA[1])) &&
+                        (isPosNumber(lineArrayA[2])) &&
+                        (lineArrayA[3].equals("S")))
+                  {
+                     if(0 < sign.getLine(3).length()) // ItemID is present
+                     {
+                        valid = true;
+                     }
+                  }
+               }
+            }
+         }
+         catch (Exception ex)
+         {
+            // something went wrong while parsing the sign. So it seems not to be a valid ChestShop sign
+         }
+      }
+
+      return (valid);
+   }
+
+   public boolean isPosNumber(String input)  
+   {
+      try  
+      {
+         if(0 < Float.parseFloat(input))
+         {
+            return true;
+         }
+         else
+         {
+            return false;
+         }
+      }  
+      catch( Exception ex)  
+      {  
+         return false;  
+      }
+   }  
+
    public long getCurrTimeInMillis()
    {
       return (((Calendar)Calendar.getInstance()).getTimeInMillis());
