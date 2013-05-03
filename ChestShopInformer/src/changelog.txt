@@ -1,5 +1,8 @@
 Changelog for ChestShopInformer by CubieX
 ------------------------------------------
+V1.2.1
+- modified messages to be more specific
+
 V1.2.0
 - added check for validity of ChestShop signs. Invalid signs will be reported to the querying player.
 

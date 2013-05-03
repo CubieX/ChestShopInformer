@@ -1,7 +1,7 @@
 name: ChestShopInformer
 main: com.github.CubieX.ChestShopInformer.ChestShopInformer
 softdepend: [PermissionsEx, zPermissions, bPermissions, PermissionsBukkit, WorldEdit]
-version: 1.2.0
+version: 1.2.1
 authors: [CubieX]
 description: Informs about a players ChestShop shops in a specified area
 

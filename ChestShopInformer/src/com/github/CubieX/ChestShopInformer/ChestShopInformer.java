@@ -205,7 +205,8 @@ public class ChestShopInformer extends JavaPlugin
 
       if(0 == emptyChests)
       {
-         statisticEmptyShops = ChatColor.YELLOW + "Es wurden keine Shops von dir im Suchbereich gefunden!";
+         statisticEmptyShops = ChatColor.YELLOW + "Es wurden keine leeren Shops von dir \n" +
+         		"im Suchbereich gefunden!";
       }
 
       player.sendMessage(statisticEmptyShops);
