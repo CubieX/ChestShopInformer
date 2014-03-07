@@ -27,7 +27,7 @@ public class CSIcommandHandler implements CommandExecutor
        }
 
        if (cmd.getName().equalsIgnoreCase("csi"))
-       { // If the player typed /arc then do the following... (can be run from console also)
+       {
            if (args.length == 0)
            { //no arguments, so help will be displayed
                return false;

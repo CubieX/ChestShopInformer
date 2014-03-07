@@ -1,9 +1,24 @@
+/*
+ * ChestShopInformer - A CraftBukkit plugin that scans iConomy ChestShops for empty or invalid shops
+ * Copyright (C) 2013  CubieX
+ * 
+ * This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License along with this program; if not,
+ * see <http://www.gnu.org/licenses/>.
+ */
 package com.github.CubieX.ChestShopInformer;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.logging.Logger;
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.block.DoubleChest;
 import org.bukkit.block.Sign;
@@ -31,6 +46,8 @@ public class ChestShopInformer extends JavaPlugin
 
    static int maxScanDistanceX = 32; // these values are checked on sign creation and can be set in the config file. 
    static int maxScanDistanceZ = 32;
+
+   private ArrayList<Chunk> chunksToSearchIn = new ArrayList<Chunk>();
 
    @Override
    public void onEnable()
@@ -133,80 +150,95 @@ public class ChestShopInformer extends JavaPlugin
       log.info(getDescription().getName() + " version " + getDescription().getVersion() + " is disabled!");
    }
 
-   // ==============================================================================
+   // ##########################################################################################################
 
-   void scanForShops (Player player, String world, int startXcoord, int endXcoord, int yCoord, int startZcoord, int endZCoord)
+   void scanForShops (Player player, String world, int startChunkXcoord, int endChunkXcoord, int startChunkZcoord, int endChunkZCoord)
    {
       Sign sign = null;
       String statisticEmptyShops = ChatColor.YELLOW + "------------------------------------------------\n" +
-            "Folgende Shops von dir auf dieser Ebene sind leer:\n" + 
+            "Folgende Shops von dir im Suchbereich sind leer:\n" + 
             "------------------------------------------------" + ChatColor.WHITE + "\n";
       String statisticInvalidSigns = ChatColor.RED + "------------------------------------------------\n" +
-            "Folgende Shops von dir auf dieser Ebene sind \n" + 
+            "Folgende Shops von dir im Suchbereich sind evt.\n" + 
             "falsch angelegt (Schild) und damit ungeschuetzt:\n" + 
             "------------------------------------------------" + ChatColor.WHITE + "\n";
       int emptyChests = 0;
       int invalidShopSigns = 0;
+      BlockState[] te = null;
 
-      // iterate through all blocks in Y-height layer and search for ChestShop-Signs of the player
-      for(int xC = startXcoord; xC <= endXcoord; xC++)
+      // get all chunks the given coordinates cover and avoid duplicates
+      chunksToSearchIn.clear();      
+
+      for(int xC = startChunkXcoord; xC <= endChunkXcoord; xC++)
       {
-         for(int zC = startZcoord; zC <= endZCoord; zC++)
+         for(int zC = startChunkZcoord; zC <= endChunkZCoord; zC++)         
          {
-            if(this.getServer().getWorld(world).getBlockTypeIdAt(xC, yCoord, zC) == 63 ||
-                  this.getServer().getWorld(world).getBlockTypeIdAt(xC, yCoord, zC) == 68) // is block a sign on a block (68) or a signpost (63)?
+            te = this.getServer().getWorld(world).getChunkAt(xC, zC).getTileEntities();
+
+            if(debug){player.sendMessage("Chunk x: " + xC +  "|y: " + zC);}
+
+            if((te != null) && (te.length > 0))
             {
-               sign = (Sign) this.getServer().getWorld(world).getBlockAt(xC, yCoord, zC).getState();
-
-               // check if sign is a ChestShop sign by reading the first line and match it with players name
-               if(sign.getLine(0).equalsIgnoreCase(player.getName()))
+               for(BlockState tileEnt : te)
                {
-                  // this sign seems to be a shop of the asking player, so scan for chest below it
-                  Block chestBlock = this.getServer().getWorld(world).getBlockAt(sign.getX(), sign.getY()-1, sign.getZ());
-
-                  if(chestBlock.getState() instanceof Chest || chestBlock.getState() instanceof DoubleChest)
+                  if(tileEnt instanceof Sign)
                   {
-                     // a chest was found below the sign. Now check if the sign is correctly formatted and thus a valid ChestShop sign                     
-                     if(shopSignIsValid(sign))
-                     {
-                        Chest chest = ((Chest) chestBlock.getState());
-                        boolean empty = true;
+                     sign = (Sign)tileEnt;
 
-                        // look through chest inventory to see if its empty or not
-                        for (ItemStack stack : chest.getBlockInventory().getContents())
+                     if((sign.getType() == Material.WALL_SIGN) || (sign.getType() == Material.SIGN_POST))
+                     {
+                        // check if sign is a ChestShop sign by reading the first line and match it with players name
+                        if(sign.getLine(0).equalsIgnoreCase(player.getName()))
                         {
-                           if (null != stack)
+                           // this sign seems to be a shop of the asking player, so scan for chest below it
+                           Block chestBlock = this.getServer().getWorld(world).getBlockAt(sign.getX(), sign.getY()-1, sign.getZ());
+
+                           if(chestBlock.getState() instanceof Chest || chestBlock.getState() instanceof DoubleChest)
                            {
-                              empty = false;
-                              // TODO count items here to show it to the player (in later version...)
+                              // a chest was found below the sign. Now check if the sign is correctly formatted and thus a valid ChestShop sign                     
+                              if(shopSignIsValid(sign))
+                              {
+                                 Chest chest = ((Chest) chestBlock.getState());
+                                 boolean empty = true;
 
-                              break; // delete this, if item count should be made!
+                                 // look through chest inventory to see if its empty or not
+                                 for (ItemStack stack : chest.getBlockInventory().getContents())
+                                 {
+                                    if (null != stack)
+                                    {
+                                       empty = false;
+                                       // TODO count items here to show it to the player (in later version...)
+
+                                       break; // delete this, if item count should be made!
+                                    }
+                                 }
+
+                                 if(empty)
+                                 {
+                                    emptyChests++;
+                                    // chest is empty, so add it to report
+                                    statisticEmptyShops = statisticEmptyShops + emptyChests + ". " + chestBlock.getX() + ":" + chestBlock.getY() + ":" + chestBlock.getZ() + " " + sign.getLine(3) + "\n";
+                                 }
+                              }
+                              else
+                              {
+                                 invalidShopSigns++;
+                                 // this shop sign is not correctly formatted, thus the shop is not working and unprotected
+                                 statisticInvalidSigns = statisticInvalidSigns + invalidShopSigns + ". " + chestBlock.getX() + ":" + chestBlock.getY() + ":" + chestBlock.getZ() + " " + sign.getLine(3) + "\n";
+                              }
                            }
-                        }
-
-                        if(empty)
-                        {
-                           emptyChests++;
-                           // chest is empty, so add it to report
-                           statisticEmptyShops = statisticEmptyShops + emptyChests + ". " + chestBlock.getX() + ":" + chestBlock.getY() + ":" + chestBlock.getZ() + " " + sign.getLine(3) + "\n";
-                        }
-                     }
-                     else
-                     {
-                        invalidShopSigns++;
-                        // this shop sign is not correctly formatted, thus the shop is not working and unprotected
-                        statisticInvalidSigns = statisticInvalidSigns + invalidShopSigns + ". " + chestBlock.getX() + ":" + chestBlock.getY() + ":" + chestBlock.getZ() + " " + sign.getLine(3) + "\n";
-                     }
-                  }
-               }
-            } // end if is sign
-         } // end for xZ
-      } // end for xC
+                        }  
+                     } // end check sign type
+                  } // end check if tileEntity is a Sign
+               } // end for loop for tile entities of current chunk
+            } // end for check if there are tile entities present in current chunk
+         } // end iterating Z
+      } // end iterating X
 
       if(0 == emptyChests)
       {
          statisticEmptyShops = ChatColor.YELLOW + "Es wurden keine leeren Shops von dir \n" +
-         		"im Suchbereich gefunden!";
+               "im Suchbereich gefunden!";
       }
 
       player.sendMessage(statisticEmptyShops);

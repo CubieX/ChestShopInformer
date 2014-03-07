@@ -2,6 +2,8 @@ package com.github.CubieX.ChestShopInformer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
+import org.bukkit.Material;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -10,7 +12,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.sk89q.worldedit.bukkit.selections.Selection;
 
@@ -75,15 +76,12 @@ public class CSIentityListener implements Listener
          {
             Player player = event.getPlayer();            
             String[] lineArray;
-            int firstXcoord = 0;
-            int firstYcoord = 0;
+            int firstXcoord = 0;           
             int firstZcoord = 0;   
-            int secondXcoord = 0;
-            int secondYcoord = 0; // this must be the same value than firstYcoord!
+            int secondXcoord = 0;            
             int secondZcoord = 0;
 
-            boolean parsingXok = false;
-            boolean parsingYok = false;
+            boolean parsingXok = false;            
             boolean parsingZok = false;
 
             Selection weSel = null;
@@ -91,9 +89,6 @@ public class CSIentityListener implements Listener
             try //correct format and valid item/block?
             {
                if(ChestShopInformer.debug){ChestShopInformer.log.info("Ist das Sign korrekt geschrieben?");}
-
-               // TODO per WorldEdit-Auswahl auswaehlbar machen. (muss dann Start- und Endblock abfragen und pruefen dass die Auswahl nur 1 BLock hoch ist u.s.w.
-               // und aufs Schild muss dann z.B. in die 2. Zeile "we" damit er weiss, er soll die Auswahl nehmen. (wird dann ersetzt auf Schild mit den coords)
 
                if(null != weInst)
                {
@@ -107,16 +102,14 @@ public class CSIentityListener implements Listener
                      (event.getLine(1).equalsIgnoreCase("we")))
                {
                   // Get coords from active WE selection, if player wrote "we" in line 1 and write them on the sign in line 1 and 2.
-                  firstXcoord = (int)weSel.getMinimumPoint().getX();
-                  firstYcoord = (int)weSel.getMinimumPoint().getY();
+                  firstXcoord = (int)weSel.getMinimumPoint().getX();                 
                   firstZcoord = (int)weSel.getMinimumPoint().getZ();
 
-                  secondXcoord = (int)weSel.getMaximumPoint().getX();
-                  secondYcoord = (int)weSel.getMaximumPoint().getY();
+                  secondXcoord = (int)weSel.getMaximumPoint().getX();                  
                   secondZcoord = (int)weSel.getMaximumPoint().getZ();
 
-                  event.setLine(1, String.valueOf(firstXcoord) + ":" + String.valueOf(firstYcoord) + ":" + String.valueOf(firstZcoord));
-                  event.setLine(2, String.valueOf(secondXcoord) + ":" + String.valueOf(secondYcoord) + ":" + String.valueOf(secondZcoord));
+                  event.setLine(1, String.valueOf(firstXcoord) + ":" + String.valueOf(firstZcoord));
+                  event.setLine(2, String.valueOf(secondXcoord) + ":" + String.valueOf(secondZcoord));
 
                   // END Get coords from active WE selection.
                }
@@ -126,29 +119,27 @@ public class CSIentityListener implements Listener
                   lineArray = (event.getLine(1).split(":"));   //parse firstXcoord:firstYcoord:firstZcoord
                   if(ChestShopInformer.debug){ChestShopInformer.log.info("ArrayLength: " + String.valueOf(lineArray.length));}
 
-                  if(lineArray.length == 3)
+                  if(lineArray.length == 2)
                   {
-                     firstXcoord = Integer.parseInt(lineArray[0]);
-                     firstYcoord = Integer.parseInt(lineArray[1]);
-                     firstZcoord = Integer.parseInt(lineArray[2]);
+                     firstXcoord = Integer.parseInt(lineArray[0]);                     
+                     firstZcoord = Integer.parseInt(lineArray[1]);
 
-                     if(ChestShopInformer.debug){ChestShopInformer.log.info("firstXcoord: " + String.valueOf(firstXcoord) + ", firstYcoord: " + String.valueOf(firstYcoord) + ", firstZcoord: " + String.valueOf(firstZcoord));}                 
+                     if(ChestShopInformer.debug){ChestShopInformer.log.info("firstXcoord: " + String.valueOf(firstXcoord) + ", firstZcoord: " + String.valueOf(firstZcoord));}                 
                   }
                   else
                   {
                      throw new Exception(ChatColor.YELLOW + "Ungueltige Eingaben!");
                   }
 
-                  lineArray = (event.getLine(2).split(":"));   //parse secondXcoord:secondYcoord:secondZcoord
+                  lineArray = (event.getLine(2).split(":"));   //parse secondXcoord:secondZcoord
                   if(ChestShopInformer.debug){ChestShopInformer.log.info("ArrayLength: " + String.valueOf(lineArray.length));}
 
-                  if(lineArray.length == 3)
+                  if(lineArray.length == 2)
                   {
-                     secondXcoord = Integer.parseInt(lineArray[0]);
-                     secondYcoord = Integer.parseInt(lineArray[1]);
-                     secondZcoord = Integer.parseInt(lineArray[2]);
+                     secondXcoord = Integer.parseInt(lineArray[0]);                     
+                     secondZcoord = Integer.parseInt(lineArray[1]);
 
-                     if(ChestShopInformer.debug){ChestShopInformer.log.info("secondXcoord: " + String.valueOf(secondXcoord) + ", secondYcoord: " + String.valueOf(secondYcoord) + ", secondZcoord: " + String.valueOf(secondZcoord));}                 
+                     if(ChestShopInformer.debug){ChestShopInformer.log.info("secondXcoord: " + String.valueOf(secondXcoord) + ", secondZcoord: " + String.valueOf(secondZcoord));}                 
                   }
                   else
                   {
@@ -180,17 +171,6 @@ public class CSIentityListener implements Listener
                   {
                      throw new Exception(ChatColor.YELLOW + "X-Distanz zu Gross! Maximal erlaubt: " + ChestShopInformer.maxScanDistanceX);
                   }
-               }               
-
-               // check if Y coord values are identical (only one height level will be scanned for signs!)
-               if((firstYcoord == secondYcoord) &&
-                     (firstYcoord <= player.getWorld().getMaxHeight()))
-               {                  
-                  parsingYok = true;
-               }
-               else
-               {
-                  throw new Exception(ChatColor.YELLOW + "Y-Werte muessen beide gleich sein und <= 255!");
                }
 
                // check which Z coord value is bigger and calculate difference accordingly
@@ -225,13 +205,12 @@ public class CSIentityListener implements Listener
                {
                   player.sendMessage(e.getMessage());
                }
-               player.sendMessage(ChatColor.YELLOW + "Hilfe: 1.Zeile: <CS-Informer> 2.Zeile: x1:y:z1 3.Zeile: x2:y:z2\n" +
-                     "Y-Wert muss die Hoehe sein auf der die Shop-Schilder haengen!");             
+               player.sendMessage(ChatColor.YELLOW + "Hilfe: 1.Zeile: <CS-Informer> 2.Zeile: x1:z1 3.Zeile: x2:z2\n");             
 
                return; //leave method
             }
 
-            if(parsingXok && parsingYok && parsingZok)
+            if(parsingXok && parsingZok)
             {
                event.setLine(0,  "<CS-Informer>");
                event.setLine(3, "Shops abfragen");
@@ -241,8 +220,7 @@ public class CSIentityListener implements Listener
             {
                //not a correctly formatted sign. Abort.                
                event.getBlock().breakNaturally();
-               player.sendMessage(ChatColor.YELLOW + "Hilfe: 1.Zeile: <CS-Informer> 2.Zeile: x1:y:z1 3.Zeile: x2:y:z2\n" +
-                     "Y-Wert muss die Hoehe sein auf der die Shop-Schilder haengen!");
+               player.sendMessage(ChatColor.YELLOW + "Hilfe: 1.Zeile: <CS-Informer> 2.Zeile: x1:z1 3.Zeile: x2:z2\n");
             }
          }
          else
@@ -262,16 +240,18 @@ public class CSIentityListener implements Listener
       Sign sign = null; 
       String[] lineArray;
       int firstXcoord = 0;
-      int firstYcoord = 0;
       int firstZcoord = 0;   
-      int secondXcoord = 0;
-      // secondYcoord must be the same value than firstYcoord, so its not needed here
+      int secondXcoord = 0;      
       int secondZcoord = 0;
+      int firstChunkXcoord = 0;
+      int firstChunkZcoord = 0;
+      int secondChunkXcoord = 0;
+      int secondChunkZcoord = 0;
 
       if(event.getAction() == Action.RIGHT_CLICK_BLOCK)
       {
-         if(event.getClickedBlock().getTypeId() == 63 ||
-               event.getClickedBlock().getTypeId() == 68) // Left clicked a sign on a block (68) oder a signpost (63)?
+         if(event.getClickedBlock().getType() == Material.WALL_SIGN ||
+               event.getClickedBlock().getType() == Material.SIGN_POST)
          {
             sign = (Sign) event.getClickedBlock().getState();
             final Sign signToUpdate = (Sign) event.getClickedBlock().getState();
@@ -291,45 +271,48 @@ public class CSIentityListener implements Listener
                      {
                         lineArray = (sign.getLine(1).split(":"));   //parse firstXcoord:firstYcoord:firstZcoord
 
-                        firstXcoord = Integer.parseInt(lineArray[0]);
-                        firstYcoord = Integer.parseInt(lineArray[1]);
-                        firstZcoord = Integer.parseInt(lineArray[2]);
+                        firstXcoord = Integer.parseInt(lineArray[0]);                        
+                        firstZcoord = Integer.parseInt(lineArray[1]);
+                        firstChunkXcoord = event.getPlayer().getWorld().getBlockAt(firstXcoord, 0, firstZcoord).getChunk().getX();
+                        firstChunkZcoord = event.getPlayer().getWorld().getBlockAt(firstXcoord, 0, firstZcoord).getChunk().getZ();
 
-                        if(ChestShopInformer.debug){ChestShopInformer.log.info("firstXcoord: " + String.valueOf(firstXcoord) + ", firstYcoord: " + String.valueOf(firstYcoord) + ", firstZcoord: " + String.valueOf(firstZcoord));}
+                        if(ChestShopInformer.debug){ChestShopInformer.log.info("firstXcoord: " + String.valueOf(firstXcoord) + ", firstZcoord: " + String.valueOf(firstZcoord));}
 
                         lineArray = (sign.getLine(2).split(":"));   //parse secondXcoord:secondYcoord:secondZcoord
 
                         secondXcoord = Integer.parseInt(lineArray[0]);                     
-                        secondZcoord = Integer.parseInt(lineArray[2]);
-
+                        secondZcoord = Integer.parseInt(lineArray[1]);
+                        secondChunkXcoord = event.getPlayer().getWorld().getBlockAt(secondXcoord, 0, secondZcoord).getChunk().getX();
+                        secondChunkZcoord = event.getPlayer().getWorld().getBlockAt(secondXcoord, 0, secondZcoord).getChunk().getZ();
+                        
                         if(ChestShopInformer.debug){ChestShopInformer.log.info("secondXcoord: " + String.valueOf(secondXcoord) + ", secondZcoord: " + String.valueOf(secondZcoord));}
 
                         // TODO scan shops here within given area and send message to askingPlayer!
                         // Scan all signs for ChestShop-Signs of the player, then scan chests directly below them
                         // TODO DO THIS ASYNCHRONOUSLY IF POSSIBLE....
 
-                        if(firstXcoord <= secondXcoord)
-                        {
-                           if(firstZcoord <= secondZcoord)
-                           {
-                              plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), firstXcoord, secondXcoord, firstYcoord, firstZcoord, secondZcoord);
-                           }
-                           else
-                           {
-                              plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), firstXcoord, secondXcoord, firstYcoord, secondZcoord, firstZcoord);
-                           }                        
-                        }
-                        else
-                        {
-                           if(firstZcoord <= secondZcoord)
-                           {
-                              plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), secondXcoord, firstXcoord, firstYcoord, firstZcoord, secondZcoord);
-                           }
-                           else
-                           {
-                              plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), secondXcoord, firstXcoord, firstYcoord, secondZcoord, firstZcoord);
-                           }
-                        }
+                              if(firstChunkXcoord <= secondChunkXcoord)
+                              {
+                                 if(firstChunkZcoord <= secondChunkZcoord)
+                                 {
+                                    plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), firstChunkXcoord, secondChunkXcoord, firstChunkZcoord, secondChunkZcoord);
+                                 }
+                                 else
+                                 {
+                                    plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), firstChunkXcoord, secondChunkXcoord, secondChunkZcoord, firstChunkZcoord);
+                                 }                        
+                              }
+                              else
+                              {
+                                 if(firstZcoord <= secondZcoord)
+                                 {
+                                    plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), secondChunkXcoord, firstChunkXcoord, firstChunkZcoord, secondChunkZcoord);
+                                 }
+                                 else
+                                 {
+                                    plugin.scanForShops(askingPlayer, askingPlayer.getWorld().getName(), secondChunkXcoord, firstChunkXcoord, secondChunkZcoord, firstChunkZcoord);
+                                 }
+                              }
 
                         // askingPlayer.sendMessage(ChatColor.GREEN + "Shop-Statstik fuer dich:\n" +
                         // "1. Eisenbloecke: 134 uebrig\n" +

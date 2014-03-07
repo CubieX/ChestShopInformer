@@ -1,5 +1,13 @@
 Changelog for ChestShopInformer by CubieX
 ------------------------------------------
+
+V1.2.2
+- minor code cleanups and using materials instead of item ids now
+- made check routine for signes based on tileEntities instead of block-by-block-loop for increasing performance
+  for bigger regions to check. Also eliminating the height restriction. Now ALL signs in the affected chunks are
+  evaluated.
+- build against CB 1.7.2-R0.2
+
 V1.2.1
 - modified messages to be more specific
 
